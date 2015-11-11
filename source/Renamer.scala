@@ -66,8 +66,29 @@ class Renamer(val basePath: Path) {
 		for(file <- files) { rename(file.toPath, completePath, ending)}
 	}
 	
-	def renameFiles2(completePath: Path, ending: String): Unit = {
+	def renameFiles2(completePath: Path, ending: String): List[Path] = {
 		val li = completePath.toFile.listFiles.toList.map { (f: File) => f.toPath }
-		li.par.map(rename(_, completePath, ending))
+		val parList = li.par.map(rename(_, completePath, ending))
+		parList.toList
+	}
+}
+
+object ListWriter {
+import java.nio.charset._
+import java.nio.file._
+	def listToFile(li: List[String], p: Path): Unit = {
+		try {
+			if(!Files.exists(p)) { Files.createFile(p) }
+			val writer = Files.newBufferedWriter(p, StandardCharsets.UTF_8)
+			for(f <- li) { writer.write(f + System.getProperty("line.separator")); println(f) }
+			writer.close
+			
+		} catch { case e: Exception => println(e) }
+	}
+	
+	def main(args: Array[String]): Unit = {
+		val p = Paths.get("C:\\Users\\quarles\\Videos\\test_pics")
+		val renamer = new Renamer(p)
+		listToFile(renamer.renameFiles2(renamer.basePath, ".jpg").map{ (f: Path) => f.toString }, Paths.get("C:\\Users\\quarles\\Videos\\zip_prog_test\\log.txt"))
 	}
 }
