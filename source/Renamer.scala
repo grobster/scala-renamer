@@ -44,19 +44,19 @@ class Renamer(val basePath: Path) {
 	
 	def isValidGid(s: String): Boolean = { s.length == 8 && s(0) == 'Z' && s(1) == '0' }
 	
-	def findGid(ls: List[String]): String = {
+	def findGid(ls: List[String]): Option[String] = {
 		@tailrec
-		def _find(ls: List[String]): String = ls match {
-			case Nil => ""
-			case x :: ys if(isValidGid(x)) => x
+		def _find(ls: List[String]): Option[String] = ls match {
+			case Nil => None
+			case x :: ys if(isValidGid(x)) => Some(x)
 			case x :: ys if(!isValidGid(x)) => _find(ys)
-			case _ => "not found"
 		}
 		_find(ls)
 	}
 	
 	def rename(file: Path, completePath: Path, ending: String): Path = {
-		val gid = findGid(file.getFileName.toString.split("\\.").toList)
+		val gidList = file.getFileName.toString.split("\\.").toList
+		val gid = findGid(gidList).getOrElse(gidList(0) + " " + gidList(1))
 		val target = Paths.get(completePath.toString + System.getProperty("file.separator") + gid + ending)
 		Files.move(file, target, REPLACE_EXISTING, ATOMIC_MOVE)
 	}
@@ -64,5 +64,10 @@ class Renamer(val basePath: Path) {
 	def renameFiles(completePath: Path, ending: String): Unit = {
 		val files = completePath.toFile.listFiles
 		for(file <- files) { rename(file.toPath, completePath, ending)}
+	}
+	
+	def renameFiles2(completePath: Path, ending: String): Unit = {
+		val li = completePath.toFile.listFiles.toList.map { (f: File) => f.toPath }
+		li.par.map(rename(_, completePath, ending))
 	}
 }
